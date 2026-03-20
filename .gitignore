@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+.venv/
+venv/
+env/
+.env
+*.env
+
+# FAISS / vector store data
+*.index
+*.faiss
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Node / React (frontend)
+node_modules/
+dist/
+.next/
+frontend/build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
+
+# Test cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secrets / API keys
+*.pem
+*.key
+secrets.json

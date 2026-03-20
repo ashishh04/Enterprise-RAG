@@ -1,0 +1,660 @@
+%% ============================================================
+%%  Springer Nature sn-jnl -- single column
+%%  Files needed: sn-jnl.cls  sn-mathphys-num.bst
+%% ============================================================
+\documentclass[sn-mathphys-num]{sn-jnl}
+
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{subcaption}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{float}
+
+%% Float placement
+\setcounter{topnumber}{6}
+\setcounter{bottomnumber}{6}
+\setcounter{totalnumber}{10}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.85}
+
+%% ============================================================
+\title[Explainable Hybrid Attention U-Net--U-Net++]{Explainable Hybrid Attention
+U-Net--U-Net++ for Cross-Dataset Brain Tumor Analysis}
+
+%% \author* marks the corresponding author; email goes in \author via \email{}
+\author*[1]{\fnm{Gowripushpa} \sur{Geddam}\,\textsuperscript{a}}
+\author[3]{\fnm{Jayasri} \sur{Kotti}}
+\author[4]{\fnm{Bindu Madhuri} \sur{Ch.}}
+
+\affil[1]{\orgdiv{Department of Computer Science \& Engineering},
+          \orgname{JNTU-GV University},
+          \orgaddress{\street{Dwarapudi}, \city{Vizianagaram},
+                      \postcode{535003}, \state{Andhra Pradesh}, \country{India}}}
+
+\affil[2]{\orgdiv{Department of Computer Science \& Engineering},
+          \orgname{Anil Neerukonda Institute of Technology \& Sciences},
+          \orgaddress{\city{Visakhapatnam}, \postcode{531162},
+                      \state{Andhra Pradesh}, \country{India}}}
+
+\affil[3]{\orgdiv{Department of CSE AI \& DS},
+          \orgname{GMR Institute of Technology},
+          \orgaddress{\city{Rajam}, \state{Andhra Pradesh}, \country{India}}}
+
+\affil[4]{\orgdiv{Department of Information \& Technology},
+          \orgname{JNTU-GV University, College of Engineering Vizianagaram},
+          \orgaddress{\street{Dwarapudi}, \city{Vizianagaram},
+                      \postcode{535003}, \state{Andhra Pradesh}, \country{India}}}
+
+%% ============================================================
+\begin{document}
+\maketitle
+
+%% Corresponding author footnote — placed AFTER \maketitle so it appears
+%% on the title page itself, not on a blank page before it.
+{\footnotesize\noindent author. E-mail:
+\texttt{gowripushpa11@gmail.com}}
+
+\begin{abstract}
+Brain tumor detection from multi-modal MRI scans is demanding due to variability in
+tumor shape, size, and appearance. This paper presents an end-to-end deep learning
+pipeline integrating three purpose-built components. First, DenoiseNet---a residual
+convolutional network trained on MRI data---suppresses Rician noise achieving 8--12\,dB
+SNR improvement and $>\% edge sharpness retention. Second, hybrid Attention UNet++
+merges nested skip connections of UNet++ with spatial attention gates of Attention
+U-Net, reaching Dice~0.963 on BraTS~2021. Third, ResNet-50 with two-phase transfer
+learning classifies Glioma, Meningioma, Pituitary, and No Tumor, achieving 98.75\%
+accuracy on BraTS~2020 and 99.75\% on BraTS~2021 (80\% error reduction). ResNet-50
+outperforms VGG-16 (96.09\%), InceptionV3 (96.80\%), and DenseNet121 (98.37\%) across
+all metrics. Grad-CAM++ heatmaps achieve 94.6\% pointing accuracy and 91\% expert
+meaningfulness rating.
+
+\keywords{DenoiseNet, Attention UNet++, ResNet-50, Grad-CAM, Grad-CAM++,
+          Explainable AI, Cross-Dataset Generalization}
+\end{abstract}
+
+
+\maketitle
+
+%% Corresponding author footnote
+{\footnotesize\noindent author. E-mail:
+\texttt{gowripushpa11@gmail.com}}
+
+%% ============================================================
+\section{Introduction}\label{sec:intro}
+%% ============================================================
+
+Brain tumors carry disproportionately high mortality---five-year survival spans from 5\%
+(glioblastoma) to 92\% (pilocytic astrocytoma)~\cite{b1}. MRI is the gold standard for
+diagnosis; multi-modal sequences (T1, T1ce, T2, FLAIR) provide complementary
+perspectives on tumor morphology and vascularity~\cite{b2,b3}. Yet manual analysis of
+150--200 slices per volume requires 30--60 minutes and suffers inter-observer Dice
+variability of 0.60--0.85~\cite{b4,b5}. Rician noise, motion artifacts, and field
+inhomogeneities further degrade MRI quality~\cite{b6,b7}.
+
+Existing pipelines share five persistent limitations: (i)~stages treated in isolation
+cause error propagation; (ii)~denoising is neglected or handled with generic Gaussian
+filters; (iii)~segmentation struggles with class imbalance and irregular shapes;
+(iv)~classifiers lack explainability; and (v)~single-dataset evaluation limits
+generalization assessment~\cite{b12,b13,b14,b15,b16}. We address all five with a unified
+pipeline achieving 15--20\,s inference on consumer GPUs.
+
+\textbf{Key contributions:}
+\begin{enumerate}[noitemsep,topsep=2pt]
+  \item \textbf{DenoiseNet}: Residual DCNN for Rician noise suppression; 8--12\,dB SNR
+    gain; $>95\%$ edge retention.
+  \item \textbf{Hybrid Attention UNet++}: Dice~0.963 on BraTS~2021; +7.9\% over
+    baseline.
+  \item \textbf{Cross-dataset validation}: BraTS~2020/2021/Figshare; 80\% error
+    reduction.
+  \item \textbf{Comprehensive comparison}: ResNet-50 vs.\ VGG-16, InceptionV3,
+    DenseNet121 under identical conditions.
+  \item \textbf{Explainable AI}: Grad-CAM++ achieving 94.6\% pointing accuracy and 91\%
+    expert meaningfulness rating.
+\end{enumerate}
+
+%% ============================================================
+\section{Related Work}\label{sec:related}
+%% ============================================================
+
+U-Net~\cite{b7} established encoder-decoder segmentation with skip connections, but
+direct connections leave a semantic gap. UNet++~\cite{b14} resolves this with nested
+dense skip pathways (+2--4\% Dice). Attention U-Net~\cite{b15} adds spatial attention
+gates (+2--5\% Dice, $<1\%$ extra parameters). DnCNN~\cite{b18} achieves strong
+Gaussian denoising but is unsuitable for signal-dependent Rician MRI noise; Abramian
+and Eklund~\cite{b29} addressed this with variance-stabilizing transforms.
+
+nnU-Net~\cite{b1} won BraTS~2020 (Dice 0.88--0.91) via auto-configuration.
+TransBTS~\cite{b10} and SwinBTS~\cite{b3} combined Transformers and CNNs, reaching
+96.5\% and 97.2\% accuracy at high VRAM cost. Gunasekaran et al.~\cite{b20} achieved
+whole-tumor Dice 0.8589 with gated cross-modal attention. Kotti et al.~\cite{b26,b27,b28}
+proposed EfficientQNet, M-DbneAlexNet, and Coot Flamingo optimisation. Mathivanan
+et al.~\cite{b24} confirmed ResNet superiority; Kumar et al.~\cite{b25} validated
+Grad-CAM on ResNet-50. Table~\ref{tab:lit_comparison} summarises key methods.
+
+\begin{table}[h]
+\caption{State-of-the-Art Comparison}\label{tab:lit_comparison}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Method} & \textbf{Yr} & \textbf{Dataset} & \textbf{Key Result}\\
+\midrule
+VST~\cite{b29}           & 2016 & MRI       & Rician denoising\\
+DnCNN~\cite{b18}         & 2017 & Generic   & PSNR 29.23\,dB\\
+UNet++~\cite{b14}        & 2018 & BraTS\'18  & +2--4\% Dice\\
+Attn U-Net~\cite{b15}    & 2018 & BraTS\'18  & +2--5\% Dice\\
+nnU-Net~\cite{b1}        & 2021 & BraTS\'20  & Dice 0.88--0.91\\
+TransBTS~\cite{b10}      & 2021 & BraTS\'20  & Acc 96.5\%\\
+SwinBTS~\cite{b3}        & 2022 & BraTS\'21  & Acc 97.2\%\\
+MM-MSCA~\cite{b20}       & 2024 & BraTS\'20  & Dice 0.8589\\
+EfficientQNet~\cite{b26} & 2025 & MRI       & Detection\\
+\textbf{Proposed}        & 2025 & BraTS\'20/21 & \textbf{98.75/99.02\%}\\
+\botrule
+\end{tabular}
+\end{table}
+
+%% ============================================================
+\section{Dataset Collection}\label{sec:dataset}
+%% ============================================================
+
+\textbf{BraTS~2020} comprises 369 training + 125 validation cases with four
+co-registered modalities (T1, T1ce, T2, FLAIR) at {\times}240{\times}155$ voxels
+at 1\,mm isotropic resolution~\cite{b2}. Expert annotations delineate three sub-regions:
+enhancing tumor (ET), tumor core (TC), and whole tumor (WT).
+
+\textbf{BraTS~2021} expands to 1,251 training + 219 validation cases with improved
+annotation consistency and broader tumor diversity~\cite{b2}, enabling rigorous
+cross-dataset generalization analysis.
+
+\textbf{Figshare} provides 3,064 T1ce slices across three classes: Glioma (1,426),
+Meningioma (708), and Pituitary (930), enabling cross-institutional evaluation.
+
+\textbf{Preprocessing:} HD-BET skull stripping, Z-score intensity normalization per
+modality, co-registration to T1ce space. Stratified 70/15/15\% train/val/test split
+across all datasets.
+
+%% ============================================================
+\section{Proposed Methodology}\label{sec:method}
+%% ============================================================
+
+\subsection{System Architecture Overview}
+
+The nine-stage pipeline (Fig.~\ref{fig:arch}) takes multi-modal MRI volumes through:
+skull stripping and registration~(S1--2), intensity normalization~(S3), Rician noise
+suppression~(S4), hybrid Attention UNet++ segmentation~(S5), ROI extraction to
+{\times}224$\,px~(S6), ResNet-50 four-class classification~(S7), Grad-CAM++
+explainability~(S8), and PACS-compatible output delivery~(S9).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{Figures/System_Architecture.jpeg}
+\caption{Proposed nine-stage end-to-end pipeline architecture.}\label{fig:arch}
+\end{figure}
+
+\subsection{Stage 1: DenoiseNet}\label{sec:denoisenet}
+
+Rician noise arises from magnitude reconstruction in k-space and is signal-dependent:
+\begin{equation}
+p(M|A)=\frac{M}{\sigma^2}\exp\!\left(-\frac{M^2+A^2}{2\sigma^2}\right)
+I_0\!\left(\frac{MA}{\sigma^2}\right)
+\end{equation}
+where $ is measured magnitude, $ true signal, $\sigma$ noise std., $ the
+modified Bessel function. DenoiseNet (Fig.~\ref{fig:denoisenet}) uses residual learning:
+\begin{equation}
+\hat{N}=\text{DenoiseNet}(I_\text{noisy}),\quad I_\text{clean}=I_\text{noisy}-\hat{N}
+\end{equation}
+Architecture: 8 conv layers in 4 residual blocks (64 maps, BN, ReLU). Training: 5,000
+MRI slices, $\sigma\in\{10,20,30,40,50\}$, loss
+$\mathcal{L}=\|N_\text{true}-\hat{N}\|^2_2+10^{-4}\|\theta\|^2_2$.
+Achieves 8--12\,dB SNR gain, $>95\%$ edge retention.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{Figures/DCNN_Architecture.png}
+\caption{DenoiseNet residual DCNN architecture.}\label{fig:denoisenet}
+\end{figure}
+
+\subsection{Stage 2: Hybrid Attention UNet++}\label{sec:segmentation}
+
+\subsubsection{UNet++ --- Nested Skip Pathways}
+Zhou et al.~\cite{b14} introduced nested dense sub-networks along skip connections to
+progressively close the encoder-decoder semantic gap:
+\begin{equation}
+X^{i,j}=\mathcal{H}\!\left([X^{i,j-1},\,\mathcal{U}(X^{i+1,j})]\right)
+\end{equation}
+
+\subsubsection{Attention U-Net --- Spatial Gating}
+Oktay et al.~\cite{b15} learn spatial attention coefficients:
+\begin{equation}
+\alpha_{i,j}=\sigma(W_g g+W_x x_{i,j}+b)\in[0,1],\quad
+\hat{x}_{i,j}=\alpha_{i,j}\cdot x_{i,j}
+\end{equation}
+
+\subsubsection{Hybrid Integration}
+The proposed model (Figs.~\ref{fig:unet},\,\ref{fig:att_work}) combines both: 5-level
+encoder (^2$--^2$), nested skip pathways (1--4 blocks/level), attention gates at
+all levels, {\times}2$ transposed-conv decoder, deep supervision. Loss:
+\begin{equation}
+\mathcal{L}_\text{seg}=\mathcal{L}_\text{Dice}+
+0.5\,\mathcal{L}_\text{BCE}+0.3\textstyle\sum_s\mathcal{L}^s_\text{DS}
+\end{equation}
+Achieves Dice~0.963 on BraTS~2021 (+7.9\% over baseline).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{Figures/AttentionUNetPP.png}
+\caption{Hybrid Attention UNet++ architecture.}\label{fig:unet}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{Figures/AttentionUNetPP_Working.jpg}
+\caption{Attention gate mechanism.}\label{fig:att_work}
+\end{figure}
+
+\subsection{Stage 3: Classification}\label{sec:classification}
+
+Four architectures evaluated under identical conditions:
+
+\textbf{VGG-16}~\cite{b16}: 130\,M params; 96.09\% accuracy.
+\textbf{InceptionV3}~\cite{b19}: parallel multi-scale convolutions; 96.80\%.
+\textbf{DenseNet121}~\cite{b5}: (L{+}1)/2$ dense connections; 98.37\%.
+\textbf{ResNet-50}~\cite{b17}: residual shortcut {=}F(x)+x$; 25\,M params.
+Two-phase transfer learning: \emph{Phase 1} (FC only, 10 epochs, lr~^{-3}$) then
+\emph{Phase 2} (full fine-tune, 40 epochs, lr~^{-4}$, cosine annealing).
+Augmentation: rotation $\pm15^\circ$, horizontal flip ({=}0.5$), brightness/contrast
+$\pm20\%$, Gaussian blur, elastic deformation.
+
+\subsection{Explainability: Grad-CAM and Grad-CAM++}
+
+\textbf{Grad-CAM:}
+^c_\text{GC}=\mathrm{ReLU}(\sum_k\alpha^c_k A^k)$,\quad
+$\alpha^c_k=\frac{1}{Z}\sum_{i,j}\frac{\partial y^c}{\partial A^k_{ij}}$
+
+\textbf{Grad-CAM++} uses pixel-wise second-order gradient weights:
+\begin{equation}
+\alpha^{kc}_{ij}=\frac{(\partial^2 y^c/\partial(A^k_{ij})^2)_+}{
+2\,\partial^2 y^c/\partial(A^k_{ij})^2+\sum_{ab}A^k_{ab}\,\partial^3 y^c/\partial(A^k_{ij})^3}
+\end{equation}
+
+%% ============================================================
+\section{Experimental Results}\label{sec:results}
+%% ============================================================
+
+\textbf{Setup:} NVIDIA RTX~3050 (4\,GB), CUDA~12.7, Python~3.12.4, PyTorch~2.10.0;
+Adam ($\beta_1{=}0.9$, $\beta_2{=}0.999$), lr~^{-4}$ with cosine annealing; batch
+8 (segmentation)/32 (classification); 100/50 epochs; early-stopping patience~15.
+
+\subsection{Segmentation Performance}
+
+Tables~\ref{tab:seg_results}--\ref{tab:seg_metrics} report quantitative results.
+Hybrid Attention UNet++ achieves Dice~0.963 and IoU~0.931, outperforming UNet++ and
+Attention U-Net. Extended 100-epoch training (Fig.~\ref{fig:training_100}): training
+Dice 0.959$\to.976; validation Dice 0.801$\to.806; training loss $-41.5\%$; plateau
+at epochs~90--95. Fig.~\ref{fig:visuals} shows qualitative denoising/segmentation.
+
+\begin{table}[h]
+\caption{Segmentation Performance on BraTS~2021}\label{tab:seg_results}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Model} & \textbf{Dice} & \textbf{IoU} & \textbf{Params (M)}\\
+\midrule
+UNet++                      & 0.949 & 0.902 & 36.6\\
+Attention U-Net             & 0.860 & 0.754 & 34.5\\
+\textbf{Hybrid Attn UNet++} & \textbf{0.976} & \textbf{0.955} & \textbf{36.8}\\
+\botrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\caption{Five-Metric Segmentation Comparison on BraTS~2021}\label{tab:seg_metrics}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Model} & \textbf{Dice} & \textbf{IoU} & \textbf{Jacc.} &
+\textbf{HD95} & \textbf{HD}\\
+\midrule
+UNet++           & 0.949 & 0.902 & 0.902 & 3.95 & 7.80\\
+Attention U-Net  & 0.860 & 0.754 & 0.754 & 5.15 & 13.50\\
+\textbf{Hybrid}  & \textbf{0.976} & \textbf{0.955} & \textbf{0.955} &
+                   \textbf{2.85} & \textbf{5.10}\\
+\botrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{training_progress_100epochs.png}
+\caption{100-epoch training: loss convergence, Dice and IoU progression.}\label{fig:training_100}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{Figures/Visual_Outputs.png}
+\caption{Qualitative results: noisy input, denoised output, segmentation vs.\
+ground truth.}\label{fig:visuals}
+\end{figure}
+
+\subsection{Classification Performance}
+
+Table~\ref{tab:cls_results} shows ResNet-50 outperforms all baselines (99.02\%).
+Training curves (Fig.~\ref{fig:curves}) show rapid learning (65\%$\to\% in 10
+epochs, plateau at ep.~30--35). The BraTS~2021 confusion matrix
+(Fig.~\ref{fig:confusion_2021}) shows only 1 misclassification.
+Fig.~\ref{fig:cls_comp} compares all models visually.
+ROC and Precision-Recall curves (Fig.~\ref{fig:roc_pr}) confirm AUC0.99$.
+
+\begin{table}[h]
+\caption{Classification Model Comparison on BraTS~2021}\label{tab:cls_results}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Model} & \textbf{Acc} & \textbf{Prec} & \textbf{F1} & \textbf{Sen} & \textbf{Spec}\\
+\midrule
+VGG-16              & 96.09\% & 0.96 & 0.960 & 0.95 & 0.96\\
+InceptionV3         & 96.80\% & 0.97 & 0.965 & 0.96 & 0.97\\
+DenseNet121         & 98.37\% & 0.98 & 0.980 & 0.98 & 0.98\\
+\textbf{ResNet-50}  & \textbf{99.02\%} & \textbf{0.99} & \textbf{0.99} &
+                      \textbf{0.99} & \textbf{0.99}\\
+\botrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{classification_comparison.png}
+\caption{Model accuracy and metric comparison.}\label{fig:cls_comp}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{Confusion_Matrix_BraTS2021.png}
+\caption{BraTS~2021 confusion matrix (400 samples, 1 misclassification).}\label{fig:confusion_2021}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{Figures/Training_Curvess.png}
+\caption{ResNet-50 training and validation accuracy curves.}\label{fig:curves}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+  \includegraphics[width=\textwidth]{Figures/ROC_Curve.jpg}
+  \caption{ROC Curves (AUC0.99$)}
+\end{subfigure}\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+  \includegraphics[width=\textwidth]{Figures/PR_Curve.jpg}
+  \caption{Precision-Recall Curves}
+\end{subfigure}
+\caption{ROC and Precision-Recall curves confirming robust generalisation.}\label{fig:roc_pr}
+\end{figure}
+
+\subsection{Cross-Dataset Validation}
+
+Table~\ref{tab:cross_dataset} shows only 0.27\% accuracy drop from BraTS~2021 to
+BraTS~2020, far below the typical 5--10\% cross-dataset degradation.
+Table~\ref{tab:benchmark} compares with published state-of-the-art on BraTS~2020.
+Figs.~\ref{fig:confusion_2020}--\ref{fig:vis_2021} show confusion matrices and
+per-class performance; 5 errors on BraTS~2020 reduced to 1 error on BraTS~2021 (80\%
+improvement).
+
+\begin{table}[h]
+\caption{Cross-Dataset Performance Analysis}\label{tab:cross_dataset}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Dataset} & \textbf{Acc} & \textbf{Prec} & \textbf{Rec} & \textbf{F1}\\
+\midrule
+BraTS~2020           & 98.75\% & 0.9875 & 0.9877 & 0.9876\\
+BraTS~2021           & 99.02\% & 0.9901 & 0.9902 & 0.9901\\
+\textbf{Improvement} & \textbf{+0.27\%} & \textbf{+0.003} & \textbf{+0.003} & \textbf{+0.003}\\
+\botrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\caption{BraTS~2020 Benchmark Comparison}\label{tab:benchmark}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Method} & \textbf{Accuracy} & \textbf{Reference}\\
+\midrule
+nnU-Net                  & 95.80\% & \cite{b1}\\
+TransBTS+                & 96.50\% & \cite{b10}\\
+SwinBTS                  & 97.20\% & \cite{b3}\\
+\textbf{Proposed Method} & \textbf{98.75\%} & \textbf{This work}\\
+\botrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{Confusion_Matrix_BraTS2020.png}
+\caption{BraTS~2020 confusion matrix (5 errors, 1.25\% error rate).}\label{fig:confusion_2020}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{Confusion_Matrix_BraTS2021.png}
+\caption{BraTS~2021 confusion matrix (1 error, 0.25\% error rate).}\label{fig:confusion_2021_comp}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{vis_2020.png}
+\caption{Per-class performance on BraTS~2020.}\label{fig:vis_2020}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{vis_2021.png}
+\caption{Per-class performance on BraTS~2021.}\label{fig:vis_2021}
+\end{figure}
+
+\subsection{Explainability Visualizations}
+
+Grad-CAM++ maps (Fig.~\ref{fig:gradcam}) confirm attention to biologically relevant
+regions. Class-specific strips (Fig.~\ref{fig:gradcam_strips}) show characteristic
+patterns: infiltrative borders for Glioma, dural attachment for Meningioma, sellar
+region for Pituitary. Expert evaluation: 94.6\% pointing accuracy, 91\% meaningfulness.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{Figures/GradcamPP.png}
+\caption{Grad-CAM++ activation maps across all tumor types.}\label{fig:gradcam}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[b]{\textwidth}
+  \centering
+  \includegraphics[width=0.95\textwidth]{Figures/GradCAMPlusPlus_glioma_752.jpg}
+  \caption{Glioma --- infiltrative border pattern}
+\end{subfigure}\\[4pt]
+\begin{subfigure}[b]{\textwidth}
+  \centering
+  \includegraphics[width=0.95\textwidth]{Figures/GradCAMPlusPlus_meningioma_424.jpg}
+  \caption{Meningioma --- dural attachment pattern}
+\end{subfigure}\\[4pt]
+\begin{subfigure}[b]{\textwidth}
+  \centering
+  \includegraphics[width=0.95\textwidth]{Figures/GradCAMPlusPlus_pituitary_1078.jpg}
+  \caption{Pituitary --- sellar region pattern}
+\end{subfigure}
+\caption{Class-specific Grad-CAM++ strips: MRI, predicted label, heatmap.}\label{fig:gradcam_strips}
+\end{figure}
+
+%% ============================================================
+\section{Discussion}\label{sec:discussion}
+%% ============================================================
+
+DenoiseNet achieves 8--12\,dB SNR improvement ($>95\%$ edge retention). Hybrid
+Attention UNet++ (Dice~0.963) surpasses UNet++ (0.925) and Attention U-Net (0.941)
+through synergistic multi-scale feature aggregation and spatial gating. ResNet-50
+(99.02\%) outperforms VGG-16 (+2.93\%), InceptionV3 (+2.22\%), and DenseNet121
+(+0.65\%), benefiting from residual connections and two-phase fine-tuning. Cross-dataset
+validation shows strong generalization (98.75\% on BraTS~2020; 80\% error reduction).
+High sensitivity and specificity (0.99) with 15--20\,s inference per volume supports
+clinical deployment.
+
+\textbf{Limitations:} Evaluation limited to BraTS and Figshare; no WHO tumor grading
+(I--IV); stages trained separately; no uncertainty quantification.
+
+\textbf{Future work:} Real-time PACS integration, 3D volumetric analysis, Vision
+Transformers, federated learning, Monte Carlo dropout uncertainty quantification,
+longitudinal tumor tracking, and mobile deployment.
+
+%% ============================================================
+\section{Conclusion}\label{sec:conclusion}
+%% ============================================================
+
+This paper presents an end-to-end deep learning pipeline achieving state-of-the-art
+brain tumor analysis: DenoiseNet (8--12\,dB SNR), hybrid Attention UNet++ (Dice~0.963,
++7.9\%), and ResNet-50 (99.02\% BraTS~2021; 98.75\% BraTS~2020). The 80\% cross-dataset
+error reduction and Grad-CAM++ explainability (94.6\% pointing accuracy) confirm the
+system's promise for trustworthy clinical deployment.
+
+%% ============================================================
+\section*{Declarations}
+%% ============================================================
+
+\textbf{Funding:} No funds, grants, or other support were received during the
+preparation of this manuscript.
+
+\textbf{Competing Interests:} The authors declare no competing interests.
+
+\textbf{Author Contributions:} G.~Geddam: conceptualisation, methodology, software,
+investigation, writing---original draft. J.~Kotti: supervision, validation,
+writing---review \& editing. B.~M.~Ch.: resources, formal analysis,
+writing---review \& editing.
+
+\textbf{Data Availability:} BraTS datasets available via MICCAI BraTS challenge.
+Figshare dataset: \url{https://figshare.com}.
+
+%% ============================================================
+\begin{thebibliography}{99}
+
+\bibitem{b1}
+Isensee F, Jaeger PF, Kohl SAA, Petersen J, Maier-Hein KH (2021)
+nnU-Net: self-configuring deep learning segmentation.
+\textit{Nature Methods} 18:203--211
+
+\bibitem{b2}
+Baid U et al (2021) RSNA-ASNR-MICCAI BraTS 2021 Benchmark.
+arXiv:2107.02314
+
+\bibitem{b3}
+Liang J et al (2022) SwinBTS.
+\textit{Brain Sciences} 12(6):797
+
+\bibitem{b4}
+Bakas S et al (2017) Cancer Genome Atlas glioma MRI collections.
+\textit{Scientific Data} 4:170117
+
+\bibitem{b5}
+Huang G, Liu Z, van der Maaten L, Weinberger KQ (2017) DenseNet.
+In: Proc IEEE CVPR, pp 4700--4708
+
+\bibitem{b6}
+Buades A, Coll B, Morel J-M (2005) Non-local image denoising.
+In: Proc IEEE CVPR, vol 2, pp 60--65
+
+\bibitem{b7}
+Ronneberger O, Fischer P, Brox T (2015) U-Net.
+In: Proc MICCAI, vol 9351, pp 234--241
+
+\bibitem{b8}
+LeCun Y, Bengio Y, Hinton G (2015) Deep learning.
+\textit{Nature} 521:436--444
+
+\bibitem{b9}
+Esteva A et al (2017) Skin cancer classification.
+\textit{Nature} 542:115--118
+
+\bibitem{b10}
+Dobko M et al (2021) TransBTS.
+In: Proc MICCAI, vol 12901, pp 109--119
+
+\bibitem{b11}
+Gulshan V et al (2016) Diabetic retinopathy detection.
+\textit{JAMA} 316(22):2402--2410
+
+\bibitem{b12}
+Coup\'{e} P et al (2008) Blockwise NLM denoising for 3-D MRI.
+\textit{IEEE Trans Med Imag} 27(4):425--441
+
+\bibitem{b13}
+Lambin P et al (2012) Radiomics.
+\textit{Eur J Cancer} 48(4):441--446
+
+\bibitem{b14}
+Zhou Z, Siddiquee MMR, Tajbakhsh N, Liang J (2018) UNet++.
+In: DLMIA, vol 11045, pp 3--11
+
+\bibitem{b15}
+Oktay O et al (2018) Attention U-Net.
+In: MIDL
+
+\bibitem{b16}
+Simonyan K, Zisserman A (2015) VGGNet.
+In: Proc ICLR
+
+\bibitem{b17}
+He K, Zhang X, Ren S, Sun J (2016) ResNet.
+In: Proc IEEE CVPR, pp 770--778
+
+\bibitem{b18}
+Zhang K et al (2017) DnCNN.
+\textit{IEEE Trans Image Process} 26(7):3142--3155
+
+\bibitem{b19}
+Szegedy C et al (2016) InceptionV3.
+In: Proc IEEE CVPR, pp 2818--2826
+
+\bibitem{b20}
+Gunasekaran S et al (2024) MM-MSCA-AF segmentation.
+\textit{Scientific Reports}
+
+\bibitem{b21}
+Farhan AS, Khalid M, Manzoor U (2025) XAI-MRI.
+\textit{Front Artif Intell} 8:1525240
+
+\bibitem{b22}
+Zhang Y et al (2021) Ensembling UNets for brain tumor segmentation.
+\textit{Front Radiol} 1:704888
+
+\bibitem{b23}
+Nahiduzzaman M et al (2025) Hybrid explainable brain tumor model.
+\textit{Scientific Reports} 15:1649
+
+\bibitem{b24}
+Mathivanan SK et al (2024) Transfer learning brain tumor detection.
+\textit{Scientific Reports} 14:7232
+
+\bibitem{b25}
+Kumar MM, Guluwadi V (2024) Grad-CAM ResNet-50 brain tumor detection.
+\textit{BMC Med Imaging} 24
+
+\bibitem{b26}
+Kotti J, Ananth MBJ, Regunathan (2025) EfficientQNet.
+\textit{Comput Electr Eng}
+
+\bibitem{b27}
+Kotti J, Chalasani V, Rajan C (2025) M-DbneAlexnet.
+\textit{Arch Physiol Biochem}
+
+\bibitem{b28}
+Kotti J, Moovendhan M, Kandasamy M (2025) Coot Flamingo classification.
+\textit{Netw Comput Neural Syst} 36(3):749--780
+
+\bibitem{b29}
+Abramian D, Eklund A (2016) Variance stabilization for Rician noise.
+Proc ISMRM
+
+\end{thebibliography}
+
+\end{document}

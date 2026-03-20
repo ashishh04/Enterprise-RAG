@@ -1,0 +1,36 @@
+.citation-card {
+    padding: var(--space-sm) var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    cursor: default;
+}
+
+.citation-card-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-text-accent);
+}
+
+.citation-card-doc {
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.citation-card-details {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.citation-score {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}

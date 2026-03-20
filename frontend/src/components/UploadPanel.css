@@ -1,0 +1,130 @@
+.upload-panel {
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    height: 100%;
+    overflow-y: auto;
+}
+
+.upload-panel-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.upload-panel-icon {
+    color: var(--color-accent-light);
+}
+
+.upload-panel-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    flex: 1;
+}
+
+/* Drop Zone */
+.drop-zone {
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl) var(--space-md);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    text-align: center;
+}
+
+.drop-zone:hover,
+.drop-zone--active {
+    border-color: var(--color-accent);
+    background: var(--color-accent-glow);
+}
+
+.drop-zone--uploading {
+    border-color: var(--color-accent);
+    cursor: wait;
+    animation: pulse-glow 2s ease infinite;
+}
+
+.drop-zone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.drop-zone-icon {
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-xs);
+}
+
+.drop-zone-text {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.drop-zone-hint {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+/* Upload Status */
+.upload-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+}
+
+.upload-status--success {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.upload-status--error {
+    background: var(--color-error-bg);
+    color: var(--color-error);
+}
+
+/* Document list */
+.document-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    flex: 1;
+    overflow-y: auto;
+}
+
+.document-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+}
+
+.document-item-icon {
+    color: var(--color-accent-light);
+    flex-shrink: 0;
+}
+
+.document-item-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.document-item-title {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.document-item-meta {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
